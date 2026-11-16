@@ -182,8 +182,8 @@ static void build(void) {
   /* language names are shown in their own language, never translated */
   set_s(&langS[0], "uiLang", "Language", "The app restarts in the new language", NULL, 0, "auto");
   { Setting *s = &langS[0]; int n = 0; s->dyn[n].v = "auto"; s->dyn[n].lb = "Auto"; n++; s->dyn[n].v = "en"; s->dyn[n].lb = "English"; n++;
-    static const char *ORDER[] = { "fr", "es", "de", "it", "pt", "nl", "pl", "tr", "ru", "ar" }; /* the web's order */
-    for (int j = 0; j < 10 && n < 40; j++) { int have = 0; for (int i = 0; i < i18n_lang_count(); i++) if (!strcmp(i18n_lang_code(i), ORDER[j])) have = 1; if (!have) continue;
+    static const char *ORDER[] = { "fr", "es", "de", "it", "pt", "pt-BR", "nl", "pl", "tr", "ru", "ar" }; /* the web's order */
+    for (int j = 0; j < 11 && n < 40; j++) { int have = 0; for (int i = 0; i < i18n_lang_count(); i++) if (!strcmp(i18n_lang_code(i), ORDER[j])) have = 1; if (!have) continue;
       snprintf(s->dynS[n], 64, "%s", ORDER[j]); s->dyn[n].v = s->dynS[n]; s->dyn[n].lb = i18n_lang_name(ORDER[j]); n++; }
     s->opts = s->dyn; s->nopts = n; }
   int nl = lang_opts(), nk = keys_opts(), na = addon_opts();
