@@ -101,16 +101,19 @@ static int key_from_phone(const char *raw) {
 
 /* ---- the work queue ------------------------------------------------------------------------------ */
 enum { E_OK = 0, E_BADKEY, E_NET };
-typedef struct Job { struct Job *next; char type[8], id[16], lang[4], key[420]; int light, err; unsigned gen; Loc *v; int none; } Job;
+typedef struct Job { struct Job *next; char type[8], id[16], lang[8], key[420]; int light, err; unsigned gen; Loc *v; int none; } Job;
 static pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
 static Job *qHead, *qTail, *done; static int workersOn; static volatile int haveDone;
 static double now_ms(void) { struct timeval tv; gettimeofday(&tv, NULL); return tv.tv_sec * 1000.0 + tv.tv_usec / 1000.0; }
-static const char *best_image(const cJSON *list, const char *lang) { /* the most voted one in that language, PNG before SVG (logos are drawn as pictures) */
-  const cJSON *x, *b = NULL;
+static const char *best_image(const cJSON *list, const char *lang) { /* the most voted one in that language (preferring region match like BR), PNG before SVG */
+  const cJSON *x, *b = NULL; int bReg = 0;
+  char iso[4]; snprintf(iso, sizeof iso, "%.2s", lang);
+  const char *reg = (strlen(lang) >= 5 && lang[2] == '-') ? lang + 3 : "";
   cJSON_ArrayForEach(x, list) { const char *fp = js_str(x, "file_path", ""); size_t n = strlen(fp);
-    if (strcmp(js_str(x, "iso_639_1", ""), lang) || (n >= 4 && !strcasecmp(fp + n - 4, ".svg"))) continue;
+    if (strcmp(js_str(x, "iso_639_1", ""), iso) || (n >= 4 && !strcasecmp(fp + n - 4, ".svg"))) continue;
+    int regMatch = (*reg && !strcmp(js_str(x, "iso_3166_1", ""), reg)) ? 1 : 0;
     double va = js_num(x, "vote_average", 0), vb = b ? js_num(b, "vote_average", 0) : 0;
-    if (!b || va > vb || (va == vb && js_num(x, "vote_count", 0) > js_num(b, "vote_count", 0))) b = x; }
+    if (!b || (regMatch > bReg) || (regMatch == bReg && (va > vb || (va == vb && js_num(x, "vote_count", 0) > js_num(b, "vote_count", 0))))) { b = x; bReg = regMatch; } }
   return b ? js_str(b, "file_path", "") : "";
 }
 typedef struct { pthread_mutex_t m; const Job *j; int tid, *ss, nss, next; cJSON *eps; } Seasons;
@@ -140,13 +143,18 @@ static cJSON *fetch(const Job *j, int *err, int *none) {
   const char *kind = !strcmp(j->type, "series") ? (tv ? "tv" : mv ? "movie" : "") : (mv ? "movie" : tv ? "tv" : "");
   if (!*kind) { cJSON_Delete(f); *none = 1; return NULL; }
   int tid = (int)js_num(!strcmp(kind, "tv") ? tv : mv, "id", 0); cJSON_Delete(f);
-  snprintf(p, sizeof p, "/%s/%d?language=%s&append_to_response=images,translations&include_image_language=%s", kind, tid, j->lang, j->lang);
+  char iso[4]; snprintf(iso, sizeof iso, "%.2s", j->lang);
+  const char *reg = (strlen(j->lang) >= 5 && j->lang[2] == '-') ? j->lang + 3 : "";
+  snprintf(p, sizeof p, "/%s/%d?language=%s&append_to_response=images,translations&include_image_language=%s", kind, tid, j->lang, iso);
   cJSON *d = tmdb_get(p, j->key, &st);
   if (!d || !js_num(d, "id", 0)) { cJSON_Delete(d); *err = E_NET; return NULL; }
   const char *name = "", *ov = ""; const cJSON *t;
-  cJSON_ArrayForEach(t, js_arr(js_obj(d, "translations"), "translations")) { const cJSON *td = js_obj(t, "data"); if (!td || strcmp(js_str(t, "iso_639_1", ""), j->lang)) continue;
-    if (!*name) { name = js_str(td, "title", ""); if (!*name) name = js_str(td, "name", ""); }
-    if (!*ov) ov = js_str(td, "overview", ""); }
+  cJSON_ArrayForEach(t, js_arr(js_obj(d, "translations"), "translations")) { const cJSON *td = js_obj(t, "data"); if (!td || strcmp(js_str(t, "iso_639_1", ""), iso)) continue;
+    int regMatch = (*reg && !strcmp(js_str(t, "iso_3166_1", ""), reg)) ? 1 : 0;
+    const char *tn = js_str(td, "title", ""); if (!*tn) tn = js_str(td, "name", "");
+    const char *to = js_str(td, "overview", "");
+    if (*tn && (!*name || regMatch)) name = tn;
+    if (*to && (!*ov || regMatch)) ov = to; }
   cJSON *v = cJSON_CreateObject(), *gs = cJSON_CreateArray();
   cJSON_AddStringToObject(v, "name", name); cJSON_AddStringToObject(v, "overview", ov);
   cJSON_ArrayForEach(t, js_arr(d, "genres")) { const char *g = js_str(t, "name", ""); if (*g) cJSON_AddItemToArray(gs, cJSON_CreateString(g)); }
