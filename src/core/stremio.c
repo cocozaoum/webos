@@ -386,6 +386,14 @@ int lib_cw_info(const Item *it, CwInfo *out) {
   copy_str(out->vid, sizeof out->vid, *vid ? vid : it->id); out->pct = (float)(to / d); out->leftMin = (float)((d - to) / 60000.0); return 1;
 }
 static char progId[64]; static Uint32 progPushT;
+void lib_clear_progress(const char *id) {
+  cJSON *l = lib_get(id); if (!l) return;
+  cJSON *s = cJSON_GetObjectItemCaseSensitive(l, "state"); if (!s) return;
+  cJSON_DeleteItemFromObjectCaseSensitive(s, "timeOffset"); cJSON_AddNumberToObject(s, "timeOffset", 0);
+  cJSON_DeleteItemFromObjectCaseSensitive(s, "duration"); cJSON_AddNumberToObject(s, "duration", 0);
+  cJSON_DeleteItemFromObjectCaseSensitive(s, "video_id"); cJSON_AddStringToObject(s, "video_id", "");
+  lib_save(l);
+}
 void lib_set_progress(const char *id, const Item *it, const char *vid, double to, double dur, int force) {
   cJSON *l = lib_get(id); if (!l) l = lib_new_item(it); cJSON *s = cJSON_GetObjectItemCaseSensitive(l, "state"); if (!s) { s = cJSON_CreateObject(); cJSON_AddItemToObject(l, "state", s); }
   if (it && !strcmp(it->id, id)) { /* its pictures and name from the title playing now: art kept wrong once (a title cast over another) is put right */

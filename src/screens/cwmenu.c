@@ -28,14 +28,14 @@
 #define CW 640.0f
 #define PX 36.0f
 #define IH 64.0f    /* an option, and 4 between them */
-enum { A_STREAMS, A_PLAY, A_RESTART, A_DETAILS, A_WATCHED, A_TRAILER, A_SIMILAR, A_REVIEWS, A_LIB };
+enum { A_STREAMS, A_PLAY, A_RESTART, A_CLEAR_CW, A_DETAILS, A_WATCHED, A_TRAILER, A_SIMILAR, A_REVIEWS, A_LIB };
 static struct {
-  int open, closing, idx, n; int acts[9]; char labels[9][96]; const char *icons[9]; Item it; char kind[32], sub[400];
+  int open, closing, idx, n; int acts[10]; char labels[10][96]; const char *icons[10]; Item it; char kind[32], sub[400];
   Tween x, op; /* the panel's slide and fade: an even ease-out (the quick-tween curve put it all in the first two frames) */ Tween out, grow; double openAt; SGlass glass; FPill pill; Nudge nudge; float h, titleLines;
   float from[5]; /* the card that was held, as it sat on screen: Reviews grows out of it */
 } M;
 static void close(void) { if (!M.open) return; M.open = 0; M.closing = 1; app_occluder_drop(); if (app_overlay) app_overlay = NULL; tween_set(&M.out, M.op.v); tween_to(&M.out, 0, 0.18f, EASE_IN_OUT); tween_to(&M.x, 28, 0.2f, EASE_CSS_EASEOUT); }
-static void add(int a, const char *icon, const char *label) { if (M.n >= 9) return; M.acts[M.n] = a; M.icons[M.n] = icon; snprintf(M.labels[M.n], sizeof M.labels[M.n], "%s", label); M.n++; }
+static void add(int a, const char *icon, const char *label) { if (M.n >= 10) return; M.acts[M.n] = a; M.icons[M.n] = icon; snprintf(M.labels[M.n], sizeof M.labels[M.n], "%s", label); M.n++; }
 static void on_meta_toggle(cJSON *m, void *ud) { (void)ud; Item it = M.it; lib_toggle_watched(&it, js_arr(m, "videos")); app_refresh_boards(); if (SCR == SCR_DETAIL) detail_refresh_watched(); }
 /* what an action did, said on the title's own card: a glass chip over it ("Added to Library", "Marked as watched");
    adding, it then folds into its icon, which flies up to the Library tab in one eased arc (a faint trail behind it)
@@ -135,6 +135,7 @@ static void act(int a) {
     case A_STREAMS: close(); detail_open_streams(it.videoId); break;
     case A_PLAY: close(); app_open_item(&it); break;
     case A_RESTART: close(); app_play_from_start(&it); break;
+    case A_CLEAR_CW: sound_play(SND_TOGGLE); fx_start(4, "minus", T("Removed from Continue Watching")); lib_clear_progress(it.id); close(); app_refresh_boards(); break;
     case A_DETAILS: { close(); DetailParams p; memset(&p, 0, sizeof p); p.it = it; app_go(SCR_DETAIL, &p, 0); break; }
     case A_WATCHED: { int was = lib_is_marked_watched(&it); sound_play(SND_TOGGLE); if (was) fx_start(4, "eyeOff", T("Marked as unwatched")); else { fx_start(3, "check", T("Marked as watched")); card_mark_pop(it.id); } } close(); if (!strcmp(it.type, "series")) { cJSON *m = sb_meta_cached(it.type, it.id); if (m) on_meta_toggle(m, NULL); else sb_meta(it.type, it.id, on_meta_toggle, NULL); } else on_meta_toggle(NULL, NULL); break;
     case A_TRAILER: close(); detail_trailer(it.type, it.id, it.name); break;
@@ -208,7 +209,7 @@ void cwmenu_show(const Item *it) {
   M.sub[0] = 0; const char *c = strrchr(it->videoId, ':');
   if (c) { const char *p = c - 1; while (p > it->videoId && *p != ':') p--; if (*p == ':') { char s[8], e[8]; snprintf(s, sizeof s, "%d", atoi(p + 1)); snprintf(e, sizeof e, "%d", atoi(c + 1)); snprintf(M.sub, sizeof M.sub, "%s", T2("Season {s} · Episode {e}", "s", s, "e", e)); if (it->epName[0]) { size_t l = strlen(M.sub); snprintf(M.sub + l, sizeof M.sub - l, "  ·  %s", it->epName); } } }
   if (it->ep) add(A_STREAMS, "play", T("Streams")); else add(A_PLAY, "play", T(it->cw ? "Resume" : "Play"));
-  Uint32 tm0 = SDL_GetTicks(); CwInfo ci; if (lib_cw_info(it, &ci) && (!it->ep || !strcmp(ci.vid, it->videoId))) add(A_RESTART, "restart", T("Watch from the beginning"));
+  Uint32 tm0 = SDL_GetTicks(); CwInfo ci; if (lib_cw_info(it, &ci) && (!it->ep || !strcmp(ci.vid, it->videoId))) { add(A_RESTART, "restart", T("Watch from the beginning")); add(A_CLEAR_CW, "minus", T("Remove from Continue Watching")); }
   if (!it->ep) add(A_DETAILS, "info", T("Details"));
   int canMark = strcmp(it->type, "series") || strchr(it->videoId, ':');
   if (canMark) { int w = lib_is_marked_watched(it); add(A_WATCHED, w ? "eyeOff" : "eye", T(w ? "Mark as unwatched" : "Mark as watched")); }

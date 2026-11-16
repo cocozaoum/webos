@@ -73,6 +73,7 @@ void lib_toggle(const Item *it);
 int  lib_cw_items(ItemList *out);       /* Continue Watching, newest first */
 typedef struct { char vid[80]; float pct, leftMin; } CwInfo;
 int  lib_cw_info(const Item *it, CwInfo *out);
+void lib_clear_progress(const char *id);
 int  lib_item_watched(const Item *it);  /* the badge */
 int  lib_is_marked_watched(const Item *it);
 void lib_toggle_watched(const Item *it, const cJSON *videos);
