@@ -1,12 +1,1 @@
-{
-  "Auto-sync": "Sincronização automática",
-  "Syncing…": "Sincronizando…",
-  "Couldn’t sync": "Não foi possível sincronizar",
-  "Nothing to sync against": "Nada com que sincronizar",
-  "Not sure: unchanged": "Incerto: sem alterações",
-  "Still reading the film’s subtitles: try again in a minute": "As legendas do filme ainda estão a ser lidas: tente novamente dentro de um minuto",
-  "Synced": "Sincronizado",
-  "speed fixed": "velocidade corrigida",
-  "Looking for a matching subtitle…": "Procurando legendas correspondentes…",
-  "Subtitles synced {n} s": "Legendas sincronizadas {n} s"
-}
+{"Auto-sync":"Sincronização automática","Couldn’t sync":"Não foi possível sincronizar","Looking for a matching subtitle…":"Procurando uma legenda correspondente…","Not sure: unchanged":"Não tem certeza: sem alteração","Nothing to sync against":"Nada para sincronizar","Still reading the film’s subtitles: try again in a minute":"Ainda lendo as legendas do filme: tente de novo em um minuto","Subtitles synced {n} s":"Legendas sincronizadas {n} s","Synced":"Sincronizado","Syncing…":"Sincronizando…","speed fixed":"velocidade fixa"}
